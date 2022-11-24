@@ -22,6 +22,8 @@ class PDFManager:
     def get_file_data(self):
         nf_locator = 'Número:\n\n'
         city_locator = 'Local da Prestação do Serviço:'
+        city_locator_1 = 'Endereço Obra:'
+        city_locator_2 = 'Natureza da Operação:'
         for file in self.files:
             file_binary = open(file, 'rb')
             parser = PDFParser(file_binary)
@@ -43,9 +45,29 @@ class PDFManager:
                 nf_content = pdf_text[nf_position:pdf_text.find('\n', nf_position)].strip()
 
                 city_position = (pdf_text.find(city_locator) + len(city_locator))              
-                city_position = re.search(r'\d?\d/\d\d\d\d', pdf_text[city_position:-1]).end() + city_position
-                city_content = pdf_text[city_position:pdf_text.find('\n', city_position+2)].strip()
-                city_content = re.sub(r'[^\w\- ]', '', city_content).capitalize()
+                city_position = re.search(r'\d+/\d\d\d\d', pdf_text[city_position:-1]).end() + city_position
+                city_content = pdf_text[city_position:pdf_text.find('\n', city_position + 2)].strip()
+                if city_content == 'A.R.T:':
+                    city_position = (pdf_text.find(city_locator_1) + len(city_locator_1))              
+                    city_content = pdf_text[city_position:pdf_text.find('\n', city_position + 2)].strip()
+                try:
+                    try:
+                        city_content = re.search(r'^(.+?[\-])', city_content).group(0)
+                    except AttributeError:
+                        city_position = (pdf_text.find(city_locator_2) + len(city_locator_2))              
+                        city_content = pdf_text[city_position:pdf_text.find('\n', city_position + 2)].strip()
+                except AttributeError:
+                    print('DEBUG')
+                    print(file)
+                    print(city_content)
+
+                    print('--------CONTEÚDO--------')
+                    print(pdf_text)
+
+                    print('FIM DEBUG')
+                    break
+
+                city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
                 self.organize_files(nf_content, city_content, file)
 
 
@@ -57,7 +79,7 @@ class PDFManager:
                 pass
 
             try:
-                system(f'copy {file} "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf"')
+                system(f'copy {file} "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf" 1>NUL')
             except FileNotFoundError:
                 print('Erro, arquivo não encontrado')
     
