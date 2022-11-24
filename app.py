@@ -44,8 +44,8 @@ class PDFManager:
                 nf_position = pdf_text.find(nf_locator) + len(nf_locator)
                 nf_content = pdf_text[nf_position:pdf_text.find('\n', nf_position)].strip()
 
-                city_position = (pdf_text.find(city_locator) + len(city_locator))              
-                city_position = re.search(r'\d+/\d\d\d\d', pdf_text[city_position:-1]).end() + city_position
+                city_position = (pdf_text.find(city_locator) + len(city_locator))
+                # city_position = re.search(r'\d?\d/\d\d\d\d', pdf_text[city_position:-1]).end() + city_position
                 city_content = pdf_text[city_position:pdf_text.find('\n', city_position + 2)].strip()
                 if city_content == 'A.R.T:':
                     city_position = (pdf_text.find(city_locator_1) + len(city_locator_1))              
@@ -79,7 +79,7 @@ class PDFManager:
                 pass
 
             try:
-                system(f'copy {file} "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf" 1>NUL')
+                system(f'cp {file} "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf"')
             except FileNotFoundError:
                 print('Erro, arquivo não encontrado')
     
