@@ -9,15 +9,27 @@ from pdfminer.pdfinterp import PDFPageInterpreter
 from pdfminer.pdfdevice import PDFDevice
 from pdfminer.layout import LAParams
 from pdfminer.converter import PDFPageAggregator
+import pandas as pd
+import openpyxl
 
 class PDFManager:
     def __init__(self, folder):
         self.files = []
         self.nome_pasta_onde_salvar = 'final'
         self.folder = folder
+        self.table_file = self.get_table_file()
         self.list_folder_files()
         self.get_file_data()
+        self.generate_table()
 
+
+    def generate_table(self):
+        self.table_file.to_excel('Relação de Notas x Cidades.xlsx')
+
+
+    def get_table_file(self):
+        return pd.DataFrame({'Número da nota': [], 'Cidade': []})
+    
     
     def get_file_data(self):
         nf_locator = 'Número:\n\n'
@@ -45,7 +57,7 @@ class PDFManager:
                 nf_content = pdf_text[nf_position:pdf_text.find('\n', nf_position)].strip()
 
                 city_position = (pdf_text.find(city_locator) + len(city_locator))
-                # city_position = re.search(r'\d?\d/\d\d\d\d', pdf_text[city_position:-1]).end() + city_position
+                city_position = re.search(r'\d?\d/\d\d\d\d', pdf_text[city_position:-1]).end() + city_position
                 city_content = pdf_text[city_position:pdf_text.find('\n', city_position + 2)].strip()
                 if city_content == 'A.R.T:':
                     city_position = (pdf_text.find(city_locator_1) + len(city_locator_1))              
@@ -73,13 +85,15 @@ class PDFManager:
 
     def organize_files(self, nf_number, nf_city, file):
             pasta_completa_para_salvar = f'{self.nome_pasta_onde_salvar}{path.sep}{nf_city}'
+            new_row = pd.DataFrame({'Número da nota': [nf_number], 'Cidade': [nf_city]}, columns=self.table_file.columns)
+            self.table_file = pd.concat([self.table_file, new_row], ignore_index=True)
             try:
                 mkdir(pasta_completa_para_salvar)
             except FileExistsError:
                 pass
 
             try:
-                system(f'cp {file} "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf"')
+                system(f'copy {file} "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf" 1>NUL')
             except FileNotFoundError:
                 print('Erro, arquivo não encontrado')
     
