@@ -36,7 +36,8 @@ class PDFManager:
         city_locator = 'Local da Prestação do Serviço:'
         city_locator_1 = 'Endereço Obra:'
         city_locator_2 = 'Natureza da Operação:'
-        for file in self.files:
+        for index, file in enumerate(self.files):
+            print(f'{index+1}/{len(self.files)} - {(index/len(self.files)) * 100}%')
             file_binary = open(file, 'rb')
             parser = PDFParser(file_binary)
             doc = PDFDocument(parser)
