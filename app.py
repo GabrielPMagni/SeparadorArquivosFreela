@@ -18,7 +18,7 @@ class PDFManager:
         self.nome_pasta_onde_salvar = 'final'
         self.folder = folder
         self.table_file = self.get_table_file()
-        self.list_folder_files()
+        self.list_folder_files(self.folder)
         self.get_file_data()
         self.generate_table()
 
@@ -94,17 +94,17 @@ class PDFManager:
                 pass
 
             try:
-                system(f'copy {file} "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf" 1>NUL')
+                system(f'cp {file} "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf"')
             except FileNotFoundError:
                 print('Erro, arquivo não encontrado')
     
 
-    def list_folder_files(self, debug=False):
+    def list_folder_files(self, dir, debug=True):
         if debug:
             print('Listando diretórios...')
         try:
-            for item in ls(self.folder):
-                d = path.join(self.folder, item)
+            for item in ls(dir):
+                d = path.join(dir, item)
                 if path.isdir(d):
                     if debug:
                         print('Pasta encontrada')
