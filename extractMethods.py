@@ -54,7 +54,7 @@ class extractMethod1(extractMethodInterface):
     def __init__(self) -> None:
         self.expectedMimeType = 'application/pdf'
         self.nf_locator = 'Número da\n\nNFS-e\n\n'
-        self.city_locator = 'Dados do Tomador de Serviços'
+        self.city_locator = 'Local da Prestação\n\n'
 
     def execute(self, file: str) -> list[str]:
         super().isValidMimeTypeOrError(file, self.expectedMimeType)
@@ -67,9 +67,7 @@ class extractMethod1(extractMethodInterface):
                 nf_content = content[nf_position:content.find('\n', nf_position)].strip()
                 
                 city_position = (content.find(self.city_locator) + len(self.city_locator))
-                city_position = re.search(r'Município\n\n', content[city_position:-1]).end() + city_position
-                city_content = content[city_position:content.find('\n', city_position + 2)].strip()
-                city_content = re.search(r'^(.+?[\-])', city_content).group(0)
+                city_content = content[city_position:content.find(' -', city_position + 2)].strip()
                 city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
                 city_content = city_content.strip()
             except AttributeError:
@@ -207,7 +205,6 @@ class extractMethod5(extractMethodInterface):
                 
                 city_position = (content.find(self.city_locator) + len(self.city_locator))
                 city_content = content[city_position:content.find('\n', city_position + 2)].strip()
-                city_content = re.search(r'^(.+?[\-])', city_content).group(0)
                 city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
                 city_content = city_content.strip()
             except AttributeError:
