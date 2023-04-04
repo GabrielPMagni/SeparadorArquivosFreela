@@ -1,6 +1,6 @@
 from os import listdir as ls
 from os import mkdir, path, system
-
+from platform import system as currentOS
 import openpyxl
 import pandas as pd
 
@@ -64,7 +64,10 @@ class PDFManager:
                 pass
 
             try:
-                system(f'copy "{file}" "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf" >NULL')
+                if currentOS() == 'Windows':
+                    system(f'copy "{file}" "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf" 1>NULL')
+                else:
+                    system(f'cp "{file}" "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf"')
             except FileNotFoundError:
                 print('Erro, arquivo não encontrado')
     
