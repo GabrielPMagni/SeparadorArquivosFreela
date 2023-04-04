@@ -1,90 +1,60 @@
-from os import path, listdir as ls, path, system, mkdir
-import re
-from pdfminer.pdfparser import PDFParser
-from pdfminer.pdfdocument import PDFDocument
-from pdfminer.pdfpage import PDFPage
-from pdfminer.pdfpage import PDFTextExtractionNotAllowed
-from pdfminer.pdfinterp import PDFResourceManager
-from pdfminer.pdfinterp import PDFPageInterpreter
-from pdfminer.pdfdevice import PDFDevice
-from pdfminer.layout import LAParams
-from pdfminer.converter import PDFPageAggregator
-import pandas as pd
+from os import listdir as ls
+from os import mkdir, path, system
+from platform import system as currentOS
 import openpyxl
+import pandas as pd
+
+from extractMethods import (ErrorOnPDFHandle, ExtractMethodList,
+                            IncorrectMimeType)
+
 
 class PDFManager:
-    def __init__(self, folder):
-        self.files = []
-        self.nome_pasta_onde_salvar = 'final'
-        self.folder = folder
-        self.table_file = self.get_table_file()
+    def __init__(self, folder: str) -> None:
+        self.files: list[str] = []
+        self.nome_pasta_onde_salvar: str = 'final'
+        self.errorLogFile = open('error.log', '+a', encoding='utf8')
+        self.folder: str = folder
+        self.set_table_file()
         self.list_folder_files(self.folder)
         self.get_file_data()
         self.generate_table()
+
+
+    def logProgress(self, actual, total):
+        print(f'{actual+1}/{total} - {(actual/total) * 100:.3f}%')
 
 
     def generate_table(self):
         self.table_file.to_excel('Relação de Notas x Cidades.xlsx')
 
 
-    def get_table_file(self):
-        return pd.DataFrame({'Número da nota': [], 'Cidade': []})
+    def set_table_file(self):
+        self.table_file = pd.DataFrame({'Número da nota': [], 'Cidade': []})
     
     
     def get_file_data(self):
-        nf_locator = 'Número:\n\n'
-        city_locator = 'Local da Prestação do Serviço:'
-        city_locator_1 = 'Endereço Obra:'
-        city_locator_2 = 'Natureza da Operação:'
         for index, file in enumerate(self.files):
-            print(f'{index+1}/{len(self.files)} - {(index/len(self.files)) * 100}%')
-            file_binary = open(file, 'rb')
-            parser = PDFParser(file_binary)
-            doc = PDFDocument(parser)
-            laparams = LAParams()
-            if not doc.is_extractable:
-                print('PDFTextExtractionNotAllowed')
-            rsrcmgr = PDFResourceManager()
-            device = PDFPageAggregator(rsrcmgr, laparams=laparams)
-            interpreter = PDFPageInterpreter(rsrcmgr, device)
-            for index, page in enumerate(PDFPage.create_pages(doc)):
-                if index > 0: break
-                interpreter.process_page(page)
-                layout = device.get_result()
-                layout.analyze(laparams)
-                pdf_text = layout.groups[0].get_text()
-
-                nf_position = pdf_text.find(nf_locator) + len(nf_locator)
-                nf_content = pdf_text[nf_position:pdf_text.find('\n', nf_position)].strip()
-
-                city_position = (pdf_text.find(city_locator) + len(city_locator))
-                city_position = re.search(r'\d?\d/\d\d\d\d', pdf_text[city_position:-1]).end() + city_position
-                city_content = pdf_text[city_position:pdf_text.find('\n', city_position + 2)].strip()
-                if city_content == 'A.R.T:':
-                    city_position = (pdf_text.find(city_locator_1) + len(city_locator_1))              
-                    city_content = pdf_text[city_position:pdf_text.find('\n', city_position + 2)].strip()
+            self.logProgress(index, len(self.files))
+            methods = ExtractMethodList().getList()
+            for methodNumber, method in enumerate(methods):
+                debug = methodNumber == len(methods) - 1
                 try:
-                    try:
-                        city_content = re.search(r'^(.+?[\-])', city_content).group(0)
-                    except AttributeError:
-                        city_position = (pdf_text.find(city_locator_2) + len(city_locator_2))              
-                        city_content = pdf_text[city_position:pdf_text.find('\n', city_position + 2)].strip()
-                except AttributeError:
-                    print('DEBUG')
-                    print(file)
-                    print(city_content)
-
-                    print('--------CONTEÚDO--------')
-                    print(pdf_text)
-
-                    print('FIM DEBUG')
+                    [nf_number, nf_city, file] = method().execute(file)
+                    self.organize_files(nf_number, nf_city, file)
                     break
+                except ErrorOnPDFHandle as err:
+                    if debug: 
+                        print(err.message)
+                        self.errorLogFile.write(err.message + '\n\n\n')
+                        exit(1)
+                except IncorrectMimeType as err:
+                    if debug: 
+                        print(err.message)
+                        self.errorLogFile.write(err.message + '\n\n\n')
+                    continue
 
-                city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
-                self.organize_files(nf_content, city_content, file)
 
-
-    def organize_files(self, nf_number, nf_city, file):
+    def organize_files(self, nf_number: str, nf_city: str, file):
             pasta_completa_para_salvar = f'{self.nome_pasta_onde_salvar}{path.sep}{nf_city}'
             new_row = pd.DataFrame({'Número da nota': [nf_number], 'Cidade': [nf_city]}, columns=self.table_file.columns)
             self.table_file = pd.concat([self.table_file, new_row], ignore_index=True)
@@ -94,12 +64,15 @@ class PDFManager:
                 pass
 
             try:
-                system(f'cp {file} "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf"')
+                if currentOS() == 'Windows':
+                    system(f'copy "{file}" "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf" 1>NULL')
+                else:
+                    system(f'cp "{file}" "{pasta_completa_para_salvar}{path.sep}{nf_number}.pdf"')
             except FileNotFoundError:
                 print('Erro, arquivo não encontrado')
     
 
-    def list_folder_files(self, dir, debug=True):
+    def list_folder_files(self, dir, debug=False):
         if debug:
             print('Listando diretórios...')
         try:
@@ -126,4 +99,4 @@ class PDFManager:
                 print('Erro não tratado list_folder_files: '+str(e))
             
 
-app = PDFManager('arquivos')
+PDFManager('arquivos')
