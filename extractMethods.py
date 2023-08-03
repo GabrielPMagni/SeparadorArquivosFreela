@@ -72,7 +72,7 @@ class extractMethod1(extractMethodInterface):
                 city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
                 city_content = city_content.strip()
             except AttributeError:
-                raise ErrorOnPDFHandle(content, [f'file {file}', f'nf_locator {self.nf_locator}', f'city_locator {self.city_locator}'])
+                raise ErrorOnPDFHandle(content, [f'file {file}'])
 
         return [nf_content, city_content, file]
 
@@ -100,7 +100,7 @@ class extractMethod2(extractMethodInterface):
                 city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
                 city_content = city_content.strip()
             except AttributeError:
-                raise ErrorOnPDFHandle(content, [f'file {file}', f'nf_locator {self.nf_locator}', f'city_locator {self.city_locator}'])
+                raise ErrorOnPDFHandle(content, [f'file {file}'])
 
         return [nf_content, city_content, file]
 
@@ -127,7 +127,7 @@ class extractMethod3(extractMethodInterface):
                 city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
                 city_content = city_content.strip()
             except AttributeError:
-                raise ErrorOnPDFHandle(content, [f'file {file}', f'nf_locator {self.nf_locator}', f'city_locator {self.city_locator}'])
+                raise ErrorOnPDFHandle(content, [f'file {file}'])
 
         return [nf_content, city_content, file]
 
@@ -155,7 +155,7 @@ class extractMethod3(extractMethodInterface):
                 city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
                 city_content = city_content.strip()
             except AttributeError:
-                raise ErrorOnPDFHandle(content, [f'file {file}', f'nf_locator {self.nf_locator}', f'city_locator {self.city_locator}'])
+                raise ErrorOnPDFHandle(content, [f'file {file}'])
 
         return [nf_content, city_content, file]
     
@@ -183,7 +183,7 @@ class extractMethod4(extractMethodInterface):
                 city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
                 city_content = city_content.strip()
             except AttributeError:
-                raise ErrorOnPDFHandle(content, [f'file {file}', f'nf_locator {self.nf_locator}', f'city_locator {self.city_locator}'])
+                raise ErrorOnPDFHandle(content, [f'file {file}'])
 
         return [nf_content, city_content, file]
     
@@ -209,7 +209,7 @@ class extractMethod5(extractMethodInterface):
                 city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
                 city_content = city_content.strip()
             except AttributeError:
-                raise ErrorOnPDFHandle(content, [f'file {file}', f'nf_locator {self.nf_locator}', f'city_locator {self.city_locator}'])
+                raise ErrorOnPDFHandle(content, [f'file {file}'])
 
         return [nf_content, city_content, file]
     
@@ -235,7 +235,7 @@ class extractMethod6(extractMethodInterface):
                 city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
                 city_content = city_content.strip()
             except AttributeError:
-                raise ErrorOnPDFHandle(content, [f'file {file}', f'nf_locator {self.nf_locator}', f'city_locator {self.city_locator}'])
+                raise ErrorOnPDFHandle(content, [f'file {file}'])
 
         return [nf_content, city_content, file]
     
@@ -261,15 +261,63 @@ class extractMethod7(extractMethodInterface):
                 city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
                 city_content = city_content.strip()
             except AttributeError:
-                raise ErrorOnPDFHandle(content, [f'file {file}', f'nf_locator {self.nf_locator}', f'city_locator {self.city_locator}'])
+                raise ErrorOnPDFHandle(content, [f'file {file}'])
 
         return [nf_content, city_content, file]
+
+
+class extractMethod8(extractMethodInterface):
+    def __init__(self) -> None:
+        self.expectedMimeType = 'application/pdf'
+        self.nf_locator = 'Número da NFS-e\n\n'
+        self.city_locator = 'Cidade - Estado\n\n'
+
+    def execute(self, file: str) -> list[str]:
+        super().isValidMimeTypeOrError(file, self.expectedMimeType)
+        pdfContentArray = getPDFText(file, 1)
+        for content in pdfContentArray:
+            try:
+                if content.find(self.nf_locator) < 0 or content.find(self.city_locator) < 0:
+                    raise AttributeError
+                nf_position = content.find(self.nf_locator) + len(self.nf_locator)
+                nf_content = content[nf_position:content.find('\n', nf_position)].strip()
+                
+                city_position = (content.find(self.city_locator) + len(self.city_locator))
+                city_content = content[city_position:content.find('-', city_position + 2)].strip()
+                city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
+                city_content = city_content.strip()
+            except AttributeError:
+                raise ErrorOnPDFHandle(content, [f'file {file}'])
+
+        return [nf_content, city_content, file]
+
+
+class extractMethod9(extractMethodInterface):
+    def __init__(self) -> None:
+        self.expectedMimeType = 'application/pdf'
+        self.situation = 'Situação\n\n'
+
+    def execute(self, file: str) -> list[str]:
+        super().isValidMimeTypeOrError(file, self.expectedMimeType)
+        pdfContentArray = getPDFText(file, 1)
+        for content in pdfContentArray:
+            try:
+                if content.find(self.situation) < 0:
+                    raise AttributeError
+                situation_position = content.find(self.situation) + len(self.situation)
+                situation_content = content[situation_position:content.find('\n', situation_position)].strip()
+                if situation_content != 'Cancelada':
+                    raise AttributeError
+            except AttributeError:
+                raise ErrorOnPDFHandle(content, [f'file {file}'])
+
+        return ['cancelada', 'cancelada', file]
 
 
 
 class ExtractMethodList:
     def __init__(self) -> None:
-        self.methods = [extractMethod1, extractMethod2, extractMethod3, extractMethod4, extractMethod5, extractMethod6, extractMethod7]
+        self.methods = [extractMethod1, extractMethod2, extractMethod3, extractMethod4, extractMethod5, extractMethod6, extractMethod7, extractMethod8, extractMethod9]
     
     def getList(self) -> list[extractMethodInterface]:
         return self.methods

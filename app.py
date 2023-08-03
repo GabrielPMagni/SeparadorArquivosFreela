@@ -55,6 +55,8 @@ class PDFManager:
 
 
     def organize_files(self, nf_number: str, nf_city: str, file):
+            if nf_number == 'cancelada' and nf_city == 'cancelada':
+                nf_city = 'Notas_Canceladas'
             pasta_completa_para_salvar = f'{self.nome_pasta_onde_salvar}{path.sep}{nf_city}'
             new_row = pd.DataFrame({'Número da nota': [nf_number], 'Cidade': [nf_city]}, columns=self.table_file.columns)
             self.table_file = pd.concat([self.table_file, new_row], ignore_index=True)
