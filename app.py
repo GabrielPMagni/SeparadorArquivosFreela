@@ -1,5 +1,6 @@
 from os import listdir as ls
 from os import mkdir, path, system
+from pathlib import Path
 from platform import system as currentOS
 import openpyxl
 import pandas as pd
@@ -7,13 +8,13 @@ import pandas as pd
 from extractMethods import (ErrorOnPDFHandle, ExtractMethodList,
                             IncorrectMimeType)
 
-
 class PDFManager:
-    def __init__(self, folder: str) -> None:
+    def __init__(self, folder: str, debug_on=False) -> None:
         self.files: list[str] = []
         self.nome_pasta_onde_salvar: str = 'final'
         self.errorLogFile = open('error.log', '+a', encoding='utf8')
         self.folder: str = folder
+        self.debug = self._debug(debug_on)
         self.set_table_file()
         self.list_folder_files(self.folder)
         self.get_file_data()
@@ -73,20 +74,24 @@ class PDFManager:
             except FileNotFoundError:
                 print('Erro, arquivo não encontrado')
     
+    @staticmethod
+    def _debug(on=False):
+        def _inner_debug(msg: any):
+            print(msg)
+        
+        return _inner_debug if on else lambda _: None
 
-    def list_folder_files(self, dir, debug=False):
-        if debug:
-            print('Listando diretórios...')
+    def list_folder_files(self, dir):
+        self.debug('Listando diretórios...')
+
         try:
             for item in ls(dir):
                 d = path.join(dir, item)
                 if path.isdir(d):
-                    if debug:
-                        print('Pasta encontrada')
-                    self.list_folder_files(d, debug)
+                    self.debug('Pasta encontrada')
+                    self.list_folder_files(d)
                 else:
-                    if debug:
-                        print('Arquivo Encontrado')
+                    self.debug('Arquivo Encontrado')
                     self.files.append(str(d))
             else:
                 if len(self.files) == 0:
@@ -94,11 +99,10 @@ class PDFManager:
                     exit(3)
                     
         except PermissionError:
-            if debug:
-                print('Permissão Negada à Pasta')
+            self.debug('Permissão Negada à Pasta')
         except Exception as e:
-            if debug:
-                print('Erro não tratado list_folder_files: '+str(e))
-            
+            self.debug('Erro não tratado list_folder_files: ' + e.args)
+  
 
-PDFManager('arquivos')
+if __name__ == '__main__':
+    PDFManager('arquivos', debug_on=False)

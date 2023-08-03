@@ -321,3 +321,82 @@ class ExtractMethodList:
     
     def getList(self) -> list[extractMethodInterface]:
         return self.methods
+    
+
+
+
+
+from dataclasses import dataclass
+from collections.abc import Callable
+from pathlib import Path
+
+
+@dataclass
+class OperationResult:
+    nf_content: str
+    nf_city: str
+    origin_file_path: str
+
+
+@dataclass(frozen=True, slots=True)
+class FileAttributes:
+    file_name: str = str()
+    expectedMimeType: str = str()
+    nf_locator: str = str()
+    city_locator: str = str()
+    situation: str = str()
+
+
+OperationGuard = Callable[[[str], FileAttributes], bool]
+Operation = Callable[[str, [str], FileAttributes], OperationResult]
+
+
+@dataclass
+class FileOperation:
+    fileAttr: FileAttributes    
+    operationGuard: OperationGuard
+    operation: Operation
+
+
+
+
+def build_file_operation1(mainfAttr: FileAttributes) -> FileOperation:
+    self_situation = None
+
+    def operation(content, fAttr: FileAttributes) -> OperationResult:
+        nf_position = content.find(fAttr.nf_locator) + len(fAttr.nf_locator)
+        nf_content = content[nf_position:content.find('\n', nf_position)].strip()
+
+        city_position = (content.find(fAttr.city_locator) + len(fAttr.city_locator))
+        city_content = content[city_position:content.find('-', city_position + 2)].strip()
+        city_content = re.sub(r'[^\w ]', '', city_content).capitalize()
+        city_content = city_content.strip()
+
+        return OperationResult(nf_city=city_content, nf_content=nf_content, origin_file_path=fAttr.file_name)
+
+    def operation_guard(content, fAttr): 
+        return content.find(fAttr.nf_locator) < 0 or content.find(fAttr.city_locator) < 0
+    
+    return FileOperation(
+        fileAttr=mainfAttr,
+        operation=operation,
+        operationGuard=operation_guard
+    )
+
+
+
+OPERATION_PIPELINE = [
+    build_file_operation1(
+        FileAttributes(
+            expectedMimeType='application/pdf',
+            nf_locator='Número da NFS-e\n\n',
+            city_locator='Cidade - Estado\n\n',
+        )
+    )
+]
+
+
+
+for i, fop in enumerate(OPERATION_PIPELINE):
+    if fop.operationGuard:
+        opResult = fop.operation(fop.fileAttr)
