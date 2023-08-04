@@ -21,9 +21,9 @@ from pathlib import Path
 
 @dataclass(slots=True)
 class OperationResult:
-    nf_content: str
-    nf_city: str
-    origin_file_path: str
+    nf_content: str = str()
+    nf_city: str = str()
+    origin_file_path: str = str()
 
 
 @dataclass(slots=True)
@@ -116,8 +116,8 @@ def nf_content_by_locator(content: str, nf_locator: str):
 
 
 def build_file_operation1() -> FileOperation:    
-    def operation(content, fAttr: FileAttributes) -> OperationResult:
-        nf_content = nf_content_by_locator(fAttr.nf_locator)
+    def operation(content: str, fAttr: FileAttributes) -> OperationResult:
+        nf_content = nf_content_by_locator(content, fAttr.nf_locator)
         
         city_position = find_city_position(content, fAttr.city_locator, [0, 1])
         city_content = find_city_content(content, city_position, [0, 1])
@@ -141,7 +141,7 @@ def build_file_operation1() -> FileOperation:
 
 
 def build_file_operation2() -> FileOperation:    
-    def operation(content, fAttr: FileAttributes) -> OperationResult:
+    def operation(content: str, fAttr: FileAttributes) -> OperationResult:
         nf_content = nf_content_by_locator(fAttr.nf_locator)
                         
         city_position = find_city_position(content, fAttr.city_locator, [0, 2])
@@ -166,7 +166,7 @@ def build_file_operation2() -> FileOperation:
 
 
 def build_file_operation3() -> FileOperation:    
-    def operation(content, fAttr: FileAttributes) -> OperationResult:
+    def operation(content: str, fAttr: FileAttributes) -> OperationResult:
         nf_content = nf_content_by_locator(fAttr.nf_locator)
 
         city_position = find_city_position(content, fAttr.city_locator, [0])
