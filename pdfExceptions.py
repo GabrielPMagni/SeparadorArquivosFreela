@@ -16,8 +16,6 @@ DEBUG
 FIM DEBUG
         '''
 
-
-
 class IncorrectMimeType(ValueError):
     def __init__(self, extpectedType: str, foundType: str) -> None:
         self.expectedType = extpectedType
