@@ -3,13 +3,29 @@ from os import mkdir, path, system
 from pathlib import Path
 from platform import system as currentOS
 import openpyxl
+from logging import getLogger, FileHandler, Formatter, DEBUG
 import pandas as pd
 
 from extractMethods import (ErrorOnPDFHandle, ExtractMethodList,
-                            IncorrectMimeType)
+                            IncorrectMimeType, execute_pipeline)
+
+
+fileLogger = getLogger('file_logger')
+hd = FileHandler('app.log', 'a+')
+hd.setFormatter(Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+fileLogger.addHandler(hd)
+fileLogger.setLevel(DEBUG)
+
+
+def _debug(on=False):
+        def _inner_debug(msg: any):
+            print(msg)
+        
+        return _inner_debug if on else lambda _: None
+
 
 class PDFManager:
-    def __init__(self, folder: str, debug_on=False) -> None:
+    def __init__(self, folder: str,  debug_on=False) -> None:
         self.files: list[str] = []
         self.nome_pasta_onde_salvar: str = 'final'
         self.errorLogFile = open('error.log', '+a', encoding='utf8')
@@ -36,23 +52,10 @@ class PDFManager:
     def get_file_data(self):
         for index, file in enumerate(self.files):
             self.logProgress(index, len(self.files))
-            methods = ExtractMethodList().getList()
-            for methodNumber, method in enumerate(methods):
-                debug = methodNumber == len(methods) - 1
-                try:
-                    [nf_number, nf_city, file] = method().execute(file)
-                    self.organize_files(nf_number, nf_city, file)
-                    break
-                except ErrorOnPDFHandle as err:
-                    if debug: 
-                        print(err.message)
-                        self.errorLogFile.write(err.message + '\n\n\n')
-                        exit(1)
-                except IncorrectMimeType as err:
-                    if debug: 
-                        print(err.message)
-                        self.errorLogFile.write(err.message + '\n\n\n')
-                    continue
+
+            for results in list(execute_pipeline(file, fileLogger)):
+                print(results)
+                # self.organize_files(opResult., nf_city, file)
 
 
     def organize_files(self, nf_number: str, nf_city: str, file):
@@ -74,13 +77,6 @@ class PDFManager:
             except FileNotFoundError:
                 print('Erro, arquivo não encontrado')
     
-    @staticmethod
-    def _debug(on=False):
-        def _inner_debug(msg: any):
-            print(msg)
-        
-        return _inner_debug if on else lambda _: None
-
     def list_folder_files(self, dir):
         self.debug('Listando diretórios...')
 
@@ -102,7 +98,22 @@ class PDFManager:
             self.debug('Permissão Negada à Pasta')
         except Exception as e:
             self.debug('Erro não tratado list_folder_files: ' + e.args)
-  
+
+
+from argparse import ArgumentParser
+
+
+parser = ArgumentParser(
+                    prog='ProgramName',
+                    description='What the program does',
+                    epilog='Text at the bottom of help')
+
+
+parser.add_argument('-f', '--foldername')
+parser.add_argument('-D', '--debug', default=False, type=str)
+
 
 if __name__ == '__main__':
-    PDFManager('arquivos', debug_on=False)
+    args = parser.parse_args()
+
+    PDFManager(args.foldername, debug_on=args.debug)
