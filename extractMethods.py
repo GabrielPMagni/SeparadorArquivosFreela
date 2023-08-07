@@ -8,6 +8,8 @@ from pdfminer.pdfdocument import PDFDocument
 from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
 from pdfminer.pdfpage import PDFPage, PDFTextExtractionNotAllowed
 from pdfminer.pdfparser import PDFParser
+import pytesseract
+from pdf2image import convert_from_path
 
 from pdfExceptions import ErrorOnPDFHandle, IncorrectMimeType
 
@@ -29,7 +31,7 @@ class extractMethodInterface:
         raise IncorrectMimeType(expectedMimeType, guessedMimeType)
 
 
-def getPDFText(file, numberOfPages: str = 1) -> list[str]:
+def getPDFText(file: str, numberOfPages: str = 1) -> list[str]:
     pagesText: list[str] = []
     file_binary = open(file, 'rb')
     parser = PDFParser(file_binary)
@@ -45,10 +47,20 @@ def getPDFText(file, numberOfPages: str = 1) -> list[str]:
         interpreter.process_page(page)
         layout = device.get_result()
         layout.analyze(laparams)
-        pdf_text: str = layout.groups[0].get_text()
+        pdf_text: str = ''
+        try:
+            pdf_text = layout.groups[0].get_text()
+        except TypeError as e:
+            pdf_text = getPDFTextAsImage(file)
         pagesText.append(pdf_text)
     return pagesText
 
+
+def getPDFTextAsImage(file):
+    images = convert_from_path(file)
+    for image in images:
+        text = pytesseract.image_to_string(image, config='--psm 6 -l por')
+        return text
 
 class extractMethod1(extractMethodInterface):
     def __init__(self) -> None:

@@ -3,21 +3,42 @@ from os import mkdir, path, system
 from platform import system as currentOS
 import openpyxl
 import pandas as pd
+from PyPDF2 import PdfReader, PdfWriter
+from datetime import datetime
+
 
 from extractMethods import (ErrorOnPDFHandle, ExtractMethodList,
                             IncorrectMimeType)
 
 
 class PDFManager:
-    def __init__(self, folder: str) -> None:
+    def __init__(self, folder: str, split_files: bool = False) -> None:
+        pass
         self.files: list[str] = []
         self.nome_pasta_onde_salvar: str = 'final'
         self.errorLogFile = open('error.log', '+a', encoding='utf8')
         self.folder: str = folder
+        self.pre_folder: str = 'arquivos_pre'
         self.set_table_file()
+        if split_files:
+            self.list_folder_files(self.pre_folder)
+            for file in self.files:
+                self.split_pdf_pages(file)
+            self.files.clear()
         self.list_folder_files(self.folder)
         self.get_file_data()
         self.generate_table()
+
+
+    def split_pdf_pages(self, pdf_path: str):
+        pdf_reader = PdfReader(pdf_path)
+        for page_num in range(len(pdf_reader.pages)):
+            now = datetime.now()
+            pdf_writer = PdfWriter()
+            output_pdf_path = f"{self.folder}/page_{now.timestamp()}.pdf"
+            pdf_writer.add_page(pdf_reader.pages[page_num])
+            with open(output_pdf_path, "wb") as output_pdf:
+                pdf_writer.write(output_pdf)
 
 
     def logProgress(self, actual, total):
